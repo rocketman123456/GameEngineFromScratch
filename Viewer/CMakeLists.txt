@@ -25,8 +25,10 @@ set(SHADER_SOURCES basic.vert basic.frag
             shadowmap_omni.vert shadowmap_omni.frag
             terrain.vert terrain.frag
             texture.frag texturearray.frag
+            cubemap.frag cubemaparray.frag
             passthrough.vert passthrough_cube.vert
             integrateBRDF.comp
+            raytrace.comp
         )
 
 IF(APPLE)
@@ -41,14 +43,14 @@ IF(APPLE)
     endforeach(SHADER)
 
     add_custom_command(OUTPUT Main.metalar
-            COMMAND xcrun -sdk macosx metal-ar rcv Main.metalar ${AIRS}
+            COMMAND xcrun -sdk macosx metal-ar rucv Main.metalar ${AIRS}
             COMMENT "Archive ${AIRS} --> Main.metalar"
             DEPENDS ${AIRS}
         )
 
     add_custom_command(OUTPUT Main.metallib
-            COMMAND xcrun -sdk macosx metallib Main.metalar -split-module-without-linking -o Main.metallib
-            COMMENT "Compile Editor.metalar --> Main.metallib"
+            COMMAND xcrun -sdk macosx metallib Main.metalar -o Main.metallib
+            COMMENT "Compile Main.metalar --> Main.metallib"
             DEPENDS Main.metalar
         )
 
@@ -144,13 +146,4 @@ ELSE(APPLE)
                         )
 ENDIF(APPLE)
 
-IF(WIN32)
-    add_custom_command(TARGET Viewer POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "${PROJECT_SOURCE_DIR}/External/Windows/bin/zlib.dll"
-            $<TARGET_FILE_DIR:Viewer>)
-ENDIF(WIN32)
-
 add_dependencies(Viewer Engine_Asset)
-
-target_include_directories(Viewer PRIVATE "${PROJECT_SOURCE_DIR}/External/src/glad/include")

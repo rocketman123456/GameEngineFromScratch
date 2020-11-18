@@ -1,14 +1,111 @@
-version: 2
+version: 2.1
+orbs:
+  win: circleci/windows@2.2.0
+
 jobs:
+  build_windows:
+    executor:
+      name: win/default
+      shell: powershell.exe
+    steps:
+      - run: systeminfo
+      - run:
+          name: "Install CMake"
+          command: |
+            $machinePath = [Environment]::GetEnvironmentVariable('Path', 'MACHINE')
+            $newMachineEnvironmentPath = $machinePath
+            
+            # install chocolatey
+            $chocolateyPath = "$env:AllUsersProfile\chocolatey\bin"
+            if(Get-Command "choco" -ErrorAction SilentlyContinue)
+            {
+              echo "Chocolatey is already installed. Skipping installation."
+            }
+            else
+            {
+              echo "Chocolatey net present. Installing chocolatey."
+              Invoke-Expression ((new-object net.webclient).DownloadString('https://chocolatey.org/install.ps1'))
+              {
+                echo "Adding $chocolateyPath to Path environment variable"
+                $env:Path += ";$chocolateyPath"
+                $newMachineEnvironmentPath += ";$chocolateyPath"
+              }
+              else
+              {
+                echo "$chocolateyPath already present in Path environment variable"
+              }
+            }
+            
+            # install cmake
+            $cmakePath = "${env:ProgramFiles(x86)}\CMake\bin"
+            if(Get-Command "cmake" -ErrorAction SilentlyContinue)
+            {
+              echo "Cmake is already installed. Skipping installation."
+            }
+            else
+            {
+              echo "Cmake not present. Installing cmake."
+              choco install cmake.portable -y --version 3.16.2
+
+              if (-not ($machinePath.ToLower().Contains($cmakePath.ToLower())))
+              {
+                echo "Adding $cmakePath to Path environment variable"
+                $env:Path += ";$cmakePath"
+                $newMachineEnvironmentPath = "$cmakePath;$newMachineEnvironmentPath"
+              }
+              else
+              {
+                echo "$cmakePath already present in Path environment variable"
+              }
+            }
+
+            # update machine environment path
+            if ($newMachineEnvironmentPath -ne $machinePath)
+            {
+              [Environment]::SetEnvironmentVariable('Path', $newMachineEnvironmentPath, 'MACHINE')
+            }
+      - restore_cache:
+          keys:
+            - source-{{ arch }}-{{ .Branch }}-{{ .Revision }}
+            - source-{{ arch }}-{{ .Branch }}-
+            - source-{{ arch }}
+      - checkout
+      - run:
+          name: git gc
+          command: |
+             git gc
+      - save_cache:
+          key: source-{{ arch }}-{{ .Branch }}-{{ .Revision }}
+          paths:
+            - ".git"
+      - run:
+          name: "Build Dependencies"
+          command: |
+            scripts/build_imgui
+            scripts/build_crossguid
+            scripts/build_opengex
+            scripts/build_zlib
+            scripts/build_bullet
+            scripts/build_cef
+            scripts/build_glslangValidator
+            scripts/build_spirvcross
+      - run:
+          name: "Build Engine"
+          command: |
+            scripts/build
+      - run:
+          name: "Test"
+          command: |
+            cmake --build build --target RUN_TESTS
   build_linux:
     docker:
-      - image: ubuntu:18.04
+      - image: ubuntu:20.04
     steps:
       - run: 
           name: Install Dependencies
           command: |
              apt update 
-             apt install -y curl clang cmake git uuid-dev libx11-dev libx11-xcb-dev libgl1-mesa-dev libnss3-dev libxss-dev libatk1.0-dev libatk-bridge2.0-dev libglib2.0-dev libpango1.0-dev libxi-dev libfontconfig1-dev libnspr4-dev libxcomposite-dev libxcursor-dev libxrender-dev libxtst-dev libxrandr-dev libgio2.0-cil-dev libdbus-1-dev libasound2-dev libcups2-dev
+             apt install -y curl clang cmake ninja-build git uuid-dev libx11-dev libx11-xcb-dev libgl1-mesa-dev libnss3-dev libxss-dev libatk1.0-dev libatk-bridge2.0-dev libglib2.0-dev libpango1.0-dev libxi-dev libfontconfig1-dev libnspr4-dev libxcomposite-dev libxcursor-dev libxrender-dev libxtst-dev libxrandr-dev libgio2.0-cil-dev libdbus-1-dev libasound2-dev libcups2-dev libncurses5-dev
              curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | bash
              apt install -y git-lfs
           environment:
@@ -19,11 +116,10 @@ jobs:
             - source-{{ arch }}-{{ .Branch }}-
             - source-{{ arch }}
       - checkout
-      - run: 
-          name: Git LFS Checkout
+      - run:
+          name: git gc
           command: |
-             git lfs fetch
-             git checkout
+             git gc
       - save_cache:
           key: source-{{ arch }}-{{ .Branch }}-{{ .Revision }}
           paths:
@@ -31,36 +127,32 @@ jobs:
       - run:
           name: Build
           command: |
-             ./build_crossguid.sh
-             ./build_opengex.sh
-             ./build_bullet.sh
-             ./build_cef.sh
-             ./build_glslangValidator.sh
-             ./build_spirvcross.sh
-             ./build.sh
+             ./scripts/build_imgui.sh
+             ./scripts/build_crossguid.sh
+             ./scripts/build_opengex.sh
+             ./scripts/build_bullet.sh
+             ./scripts/build_cef.sh
+             ./scripts/build_glslangValidator.sh
+             ./scripts/build_spirvcross.sh
+             ./scripts/build-ninja.sh
       - run:
           name: Test
           command: |
              cmake --build ./build --target test
   build_macos:
     macos:
-      xcode: "11.3.0"
+      xcode: "11.4.1"
     steps:
       - restore_cache:
           keys:
             - source-{{ arch }}-{{ .Branch }}-{{ .Revision }}
             - source-{{ arch }}-{{ .Branch }}-
             - source-{{ arch }}
-      - run: 
-          name: git restore
-          command: |
-             git restore .
       - checkout
-      - run: 
-          name: Git LFS Checkout
+      - run:
+          name: git gc
           command: |
-             git lfs fetch
-             git checkout
+             git gc
       - save_cache:
           key: source-{{ arch }}-{{ .Branch }}-{{ .Revision }}
           paths:
@@ -72,17 +164,18 @@ jobs:
              sudo installer -package $(pwd)/MacPorts-2.6.2-10.15-Catalina.pkg -target /
              rm $(pwd)/MacPorts-2.6.2-10.15-Catalina.pkg
              export PATH=/opt/local/bin:/opt/local/sbin:$PATH 
-             sudo -E port -q install cmake
+             sudo -E port -q install cmake ninja
       - run:
           name: Build
           command: |
              export PATH=/opt/local/bin:/opt/local/sbin:$PATH 
-             ./build_crossguid.sh
-             ./build_opengex.sh
-             ./build_zlib.sh
-             ./build_bullet.sh
-             ./build_cef.sh
-             ./build.sh
+             ./scripts/build_imgui.sh
+             ./scripts/build_crossguid.sh
+             ./scripts/build_opengex.sh
+             ./scripts/build_zlib.sh
+             ./scripts/build_bullet.sh
+             ./scripts/build_cef.sh
+             ./scripts/build-ninja.sh
       - run:
           name: Test
           command: |
@@ -135,9 +228,9 @@ jobs:
       - run:
           name: Build External Dependencies
           command: |
-                   ./build_crossguid-android.sh
-                   ./build_opengex-android.sh
-                   ./build_bullet-android.sh
+                   ./scripts/build_crossguid-android.sh
+                   ./scripts/build_opengex-android.sh
+                   ./scripts/build_bullet-android.sh
       - run:
           name: Build
           command: |
@@ -228,6 +321,7 @@ workflows:
   version: 2
   build_and_test:
     jobs:
+      - build_windows
       - build_linux
       - build_macos
       #- build_android

@@ -1,11 +1,9 @@
 #pragma once
-#include "IDispatchPass.hpp"
+#include "BaseDispatchPass.hpp"
 
 namespace My {
-    class BRDFIntegrator : implements IDispatchPass
-    {
-    public:
-        ~BRDFIntegrator() override = default; 
-        void Dispatch() final;
-    };
-}
+class BRDFIntegrator : public BaseDispatchPass {
+   public:
+    void Dispatch(Frame& frame) final;
+};
+}  // namespace My

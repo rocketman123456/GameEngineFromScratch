@@ -1,11 +1,11 @@
 #pragma once
-#include "BasePass.hpp"
+#include "BaseDrawPass.hpp"
 
 namespace My {
-    class ShadowMapPass: public BasePass
-    {
-    public:
-        ~ShadowMapPass() override = default;
-        void Draw(Frame& frame) final;
-    };
-}
+class ShadowMapPass : public BaseDrawPass {
+   public:
+    void BeginPass() override {}
+    void Draw(Frame& frame) final;
+    void EndPass() override {}
+};
+}  // namespace My

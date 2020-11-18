@@ -1,0 +1,11 @@
+add_library(DrawSubPass
+    GeometrySubPass.cpp
+    GuiSubPass.cpp
+    DebugOverlaySubPass.cpp
+    SkyBoxSubPass.cpp
+    TerrainSubPass.cpp
+    ${PROJECT_SOURCE_DIR}/External/src/imgui/imgui.cpp
+    ${PROJECT_SOURCE_DIR}/External/src/imgui/imgui_draw.cpp
+    ${PROJECT_SOURCE_DIR}/External/src/imgui/imgui_demo.cpp 
+    ${PROJECT_SOURCE_DIR}/External/src/imgui/imgui_widgets.cpp
+)

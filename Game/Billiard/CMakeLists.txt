@@ -46,8 +46,8 @@ IF(APPLE)
     )
 
     add_custom_command(OUTPUT Main.metallib
-        COMMAND xcrun -sdk macosx metallib Main.metalar -split-module-without-linking -o Main.metallib
-        COMMENT "Compile Editor.metalar --> Main.metallib"
+        COMMAND xcrun -sdk macosx metallib Main.metalar -o Main.metallib
+        COMMENT "Compile Main.metalar --> Main.metallib"
         DEPENDS Main.metalar
     )
 
@@ -89,12 +89,3 @@ ELSE(APPLE)
                             PlatformInterface
                         )
 ENDIF(APPLE)
-
-IF(WIN32)
-    add_custom_command(TARGET BilliardGame POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "${PROJECT_SOURCE_DIR}/External/Windows/bin/zlib.dll"
-            $<TARGET_FILE_DIR:BilliardGame>)
-ENDIF(WIN32)
-
-target_include_directories(BilliardGame PRIVATE "${PROJECT_SOURCE_DIR}/External/src/glad/include")

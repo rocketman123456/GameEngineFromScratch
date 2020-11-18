@@ -2,15 +2,16 @@
 #include "SdlApplication.hpp"
 
 namespace My {
-    class OpenGLApplication : public SdlApplication {
-    public:
-        using SdlApplication::SdlApplication;
+class OpenGLApplication : public SdlApplication {
+   public:
+    using SdlApplication::SdlApplication;
 
-        void Tick() override;
+    void Tick() override;
 
-        void CreateMainWindow() override;
+   protected:
+    void CreateMainWindow() override;
 
-    private:
-        SDL_GLContext m_hContext;
-    };
-}
+   private:
+    SDL_GLContext m_hContext;
+};
+}  // namespace My

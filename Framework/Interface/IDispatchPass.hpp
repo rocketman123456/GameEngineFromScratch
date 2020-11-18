@@ -1,13 +1,11 @@
 #pragma once
+#include "FrameStructure.hpp"
+#include "IPass.hpp"
 #include "Interface.hpp"
 
 namespace My {
-    Interface IDispatchPass
-    {
-    public:
-        IDispatchPass() = default;
-        virtual ~IDispatchPass() = default;
-
-        virtual void Dispatch() = 0;
-    };
-}
+_Interface_ IDispatchPass : _inherits_ IPass {
+   public:
+    virtual void Dispatch(Frame & frame) = 0;
+};
+}  // namespace My

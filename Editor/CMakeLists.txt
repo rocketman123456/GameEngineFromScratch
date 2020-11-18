@@ -28,8 +28,8 @@ IF(APPLE)
         )
 
     add_custom_command(OUTPUT Main.metallib
-            COMMAND xcrun -sdk macosx metallib Main.metalar -split-module-without-linking -o Main.metallib
-            COMMENT "Compile Editor.metalar --> Main.metallib"
+            COMMAND xcrun -sdk macosx metallib Main.metalar -o Main.metallib
+            COMMENT "Compile Main.metalar --> Main.metallib"
             DEPENDS Main.metalar
         )
 
@@ -94,7 +94,6 @@ target_link_libraries(Editor
 # copy dependencies
 IF(WIN32)
     set(OTHER_DEPENDENCIES
-            "${PROJECT_SOURCE_DIR}/External/Windows/bin/zlib.dll"
             "${PROJECT_SOURCE_DIR}/External/Windows/bin/libcef.dll"
             "${PROJECT_SOURCE_DIR}/External/Windows/bin/chrome_elf.dll"
             "${PROJECT_SOURCE_DIR}/External/Windows/bin/libEGL.dll"
@@ -126,7 +125,7 @@ ELSE(WIN32)
 
         # Move the Helper app into the Frameworks directory and change the rpath.
         COMMAND ${CMAKE_COMMAND} -E copy_directory
-                ${CEF_HELPER_OUTPUT_NAME}.app
+                $<TARGET_BUNDLE_DIR:EditorHelper>
                 $<TARGET_FILE_DIR:Editor>/../Frameworks/${CEF_HELPER_OUTPUT_NAME}.app
         
         COMMAND install_name_tool -change 
